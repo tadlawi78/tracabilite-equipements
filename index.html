@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traçabilité Équipements — MAT4U</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e0dfd8;
+    --border2: #cccbc3;
+    --text: #1a1a18;
+    --text2: #6b6b64;
+    --text3: #9b9b92;
+    --accent: #2d6a4f;
+    --accent-light: #d8eedf;
+    --amber: #92400e;
+    --amber-light: #fef3c7;
+    --red: #991b1b;
+    --red-light: #fee2e2;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--text);
+    color: #fff;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-brand {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-brand span {
+    color: #6ee7b7;
+  }
+  .header-nav {
+    display: flex;
+    gap: 2px;
+  }
+  .nav-btn {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.55);
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  .nav-btn.active { color: #fff; background: rgba(255,255,255,0.12); }
+
+  /* LAYOUT */
+  .main { padding: 1.5rem 2rem; max-width: 1200px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* SCANNER BAR — toujours visible */
+  .scanner-bar {
+    background: var(--text);
+    padding: 0.75rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .scanner-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #6ee7b7;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .scanner-field {
+    font-family: var(--mono);
+    font-size: 14px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    width: 240px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .scanner-field:focus { border-color: #6ee7b7; }
+  .scanner-field::placeholder { color: rgba(255,255,255,0.3); }
+  .scanner-result-pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    flex: 1;
+  }
+  .scanner-result-pill.found { color: #6ee7b7; }
+  .scanner-result-pill.notfound { color: #fca5a5; }
+
+  /* METRICS */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+  }
+  .metric-label { font-size: 11px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+  .metric-value { font-size: 28px; font-weight: 300; color: var(--text); font-family: var(--mono); }
+  .metric-value.green { color: var(--accent); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-value.red { color: var(--red); }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text2); letter-spacing: 0.04em; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 9px 14px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+    font-size: 13px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #fafaf7; }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .badge-active { background: var(--accent-light); color: var(--accent); }
+  .badge-active::before { background: var(--accent); }
+  .badge-dispo { background: var(--amber-light); color: var(--amber); }
+  .badge-dispo::before { background: var(--amber); }
+  .badge-maint { background: var(--red-light); color: var(--red); }
+  .badge-maint::before { background: var(--red); }
+
+  /* CODE */
+  .code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 400;
+  }
+  .btn-primary { background: var(--text); color: #fff; border: none; }
+  .btn-primary:hover { background: #333; }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { background: var(--surface2); }
+  .btn-icon { background: transparent; color: var(--text3); border: 1px solid var(--border); padding: 5px 9px; border-radius: var(--radius); cursor: pointer; font-size: 14px; }
+  .btn-icon:hover { background: var(--surface2); color: var(--text); }
+
+  /* SEARCH BAR */
+  .toolbar { display: flex; gap: 8px; margin-bottom: 1rem; align-items: center; }
+  .toolbar input, .toolbar select {
+    padding: 7px 12px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    outline: none;
+  }
+  .toolbar input { flex: 1; }
+  .toolbar input:focus, .toolbar select:focus { border-color: var(--accent); }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 11px; font-weight: 500; color: var(--text2); letter-spacing: 0.05em; text-transform: uppercase; }
+  .form-group input, .form-group select {
+    padding: 8px 11px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    outline: none;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+
+  /* MODAL */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal h3 { font-size: 15px; font-weight: 500; margin-bottom: 1.25rem; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+
+  /* CHANTIER CARD */
+  .chantier-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  .chantier-header {
+    padding: 1rem 1.25rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .chantier-nom { font-size: 14px; font-weight: 500; }
+  .chantier-meta { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+  /* TOAST */
+  #toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--text);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: var(--mono);
+    display: none;
+    z-index: 999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+
+  /* HIGHLIGHT scan */
+  .row-highlighted td { background: #f0faf5 !important; }
+
+  /* OVERDUE */
+  .overdue { color: var(--red); font-weight: 500; }
+
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem;
+    color: var(--text3);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    ▣ <span>MAT4U</span> · Traçabilité équipements
+  </div>
+  <div class="header-nav">
+    <button class="nav-btn active" onclick="showView('dashboard')">Tableau de bord</button>
+    <button class="nav-btn" onclick="showView('equipements')">Équipements</button>
+    <button class="nav-btn" onclick="showView('chantiers')">Chantiers</button>
+    <div style="width:1px;background:rgba(255,255,255,0.12);margin:8px 4px;"></div>
+    <button class="nav-btn" onclick="exportBackup()" title="Sauvegarder une copie JSON">💾 Sauvegarder</button>
+    <label class="nav-btn" style="cursor:pointer;" title="Restaurer depuis une sauvegarde">📂 Restaurer<input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)" /></label>
+  </div>
+</div>
+
+<!-- SCANNER BAR persistante -->
+<div class="scanner-bar">
+  <span class="scanner-label">▶ SCAN</span>
+  <input
+    type="text"
+    id="scanner-global"
+    class="scanner-field"
+    placeholder="Scanner ou taper un code..."
+    autocomplete="off"
+  />
+  <span class="scanner-result-pill" id="scanner-pill">En attente de scan...</span>
+  <button class="btn" style="background:#6ee7b7;color:#064e3b;border:none;font-size:12px;padding:6px 12px;" onclick="openEditFromScan()">Modifier ↗</button>
+</div>
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div id="view-dashboard" class="view active">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div>
+        <div style="font-size:20px;font-weight:300;color:var(--text);">Vue d'ensemble</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;" id="dash-date"></div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddEquip()">+ Ajouter équipement</button>
+    </div>
+    <div class="metrics" id="metrics-grid"></div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">TOUS LES ÉQUIPEMENTS</span>
+        <span style="font-size:12px;color:var(--text3);" id="overdue-count"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Désignation</th>
+            <th>Code-barres</th>
+            <th>Chantier</th>
+            <th>Entrée</th>
+            <th>Sortie prévue</th>
+            <th>Statut</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dash-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EQUIPEMENTS -->
+  <div id="view-equipements" class="view">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="font-size:20px;font-weight:300;">Équipements</div>
+      <button class="btn btn-primary" onclick="openAddEquip()">+ Ajouter</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="eq-search" placeholder="Rechercher par nom ou code..." oninput="renderEquipTable()" />
+      <select id="eq-filter-statut" onchange="renderEquipTable()">
+        <option value="">Tous les statuts</option>
+        <option value="Sur chantier">Sur chantier</option>
+        <option value="Disponible">Disponible</option>
+        <option value="Maintenance">Maintenance</option>
+      </select>
+      <select id="eq-filter-chantier" onchange="renderEquipTable()">
+        <option value="">Tous les chantiers</option>
+      </select>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Désignation</th>
+            <th>Code-barres</th>
+            <th>Catégorie</th>
+            <th>Chantier</th>
+            <th>Entrée</th>
+            <th>Sortie prévue</th>
+            <th>Statut</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="equip-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CHANTIERS -->
+  <div id="view-chantiers" class="view">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="font-size:20px;font-weight:300;">Chantiers</div>
+      <button class="btn btn-primary" onclick="openAddChantier()">+ Nouveau chantier</button>
+    </div>
+    <div id="chantiers-list"></div>
+  </div>
+
+</div>
+
+<!-- MODAL ÉQUIPEMENT -->
+<div class="modal-backdrop" id="modal-equip">
+  <div class="modal">
+    <h3 id="modal-equip-title">Ajouter un équipement</h3>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Désignation</label>
+        <input type="text" id="f-nom" placeholder="Ex : Nacelle 12m bi-énergie" />
+      </div>
+      <div class="form-group">
+        <label>Code-barres</label>
+        <input type="text" id="f-code" placeholder="MAT-2024-XXX" style="font-family:var(--mono)" />
+      </div>
+      <div class="form-group">
+        <label>Catégorie</label>
+        <select id="f-cat">
+          <option>Élévation</option>
+          <option>Terrassement</option>
+          <option>Compactage</option>
+          <option>Levage</option>
+          <option>Éclairage / Énergie</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Chantier</label>
+        <select id="f-chantier"></select>
+      </div>
+      <div class="form-group">
+        <label>Statut</label>
+        <select id="f-statut">
+          <option value="Sur chantier">Sur chantier</option>
+          <option value="Disponible">Disponible</option>
+          <option value="Maintenance">Maintenance</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date d'entrée</label>
+        <input type="date" id="f-entree" />
+      </div>
+      <div class="form-group">
+        <label>Sortie prévue</label>
+        <input type="date" id="f-sortie" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <input type="text" id="f-notes" placeholder="Optionnel..." />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-equip')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveEquip()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIT ÉQUIPEMENT COMPLET -->
+<div class="modal-backdrop" id="modal-edit">
+  <div class="modal">
+    <h3>Modifier l'équipement</h3>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Désignation</label>
+        <input type="text" id="e-nom" placeholder="Nom du matériel" />
+      </div>
+      <div class="form-group">
+        <label>Code-barres</label>
+        <input type="text" id="e-code" style="font-family:var(--mono)" />
+      </div>
+      <div class="form-group">
+        <label>Catégorie</label>
+        <select id="e-cat">
+          <option>Élévation</option>
+          <option>Terrassement</option>
+          <option>Compactage</option>
+          <option>Levage</option>
+          <option>Éclairage / Énergie</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date d'entrée</label>
+        <input type="date" id="e-entree" />
+      </div>
+      <div class="form-group">
+        <label>Sortie prévue</label>
+        <input type="date" id="e-sortie" />
+      </div>
+      <div class="form-group">
+        <label>Chantier</label>
+        <select id="e-chantier"></select>
+      </div>
+      <div class="form-group">
+        <label>Statut</label>
+        <select id="e-statut">
+          <option value="Sur chantier">Sur chantier</option>
+          <option value="Disponible">Disponible</option>
+          <option value="Maintenance">Maintenance</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Notes</label>
+        <input type="text" id="e-notes" placeholder="Optionnel..." />
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn" style="background:transparent;color:var(--red);border:1px solid #fca5a5;font-size:13px;padding:7px 14px;border-radius:var(--radius);cursor:pointer;" onclick="deleteEquip()">🗑 Supprimer</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-edit')">Annuler</button>
+        <button class="btn btn-primary" onclick="saveEdit()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CHANTIER -->
+<div class="modal-backdrop" id="modal-chantier">
+  <div class="modal">
+    <h3 id="modal-chantier-title">Nouveau chantier</h3>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Nom du chantier</label>
+      <input type="text" id="c-nom" placeholder="Ex : ZAC Confluence — Lyon" />
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Adresse / Localisation</label>
+      <input type="text" id="c-adresse" placeholder="Ex : 12 rue de la Paix, Paris 15e" />
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label>Responsable</label>
+      <input type="text" id="c-resp" placeholder="Nom du chef de chantier" />
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn" id="btn-delete-chantier" style="display:none;background:transparent;color:var(--red);border:1px solid #fca5a5;font-size:13px;padding:7px 14px;border-radius:var(--radius);cursor:pointer;" onclick="deleteChantier()">🗑 Supprimer</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-chantier')">Annuler</button>
+        <button class="btn btn-primary" onclick="saveChantier()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── DONNÉES ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'mat4u-tracabilite-v1';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return {
+    chantiers: [
+      { id: 1, nom: "Chantier A4 — Paris 15e", adresse: "145 rue Lecourbe, Paris 15e", resp: "M. Benali" },
+      { id: 2, nom: "ZAC Confluence — Lyon", adresse: "Quai Perrache, Lyon 2e", resp: "Mme. Moreau" },
+      { id: 3, nom: "Lotissement Les Chênes — Évry", adresse: "ZAC Courcouronnes, Évry", resp: "M. Ouadah" },
+    ],
+    equipements: [
+      { id: 1, nom: "Nacelle 12m BI-Énergie", code: "MAT-2024-001", cat: "Élévation", chantierId: 1, entree: "2024-03-01", sortie: "2024-04-15", statut: "Sur chantier", notes: "" },
+      { id: 2, nom: "Compacteur à rouleau 2T", code: "MAT-2024-002", cat: "Compactage", chantierId: 1, entree: "2024-02-20", sortie: "2024-04-01", statut: "Sur chantier", notes: "" },
+      { id: 3, nom: "Mini-pelle 1.5T", code: "MAT-2024-003", cat: "Terrassement", chantierId: 2, entree: "2024-03-10", sortie: "2024-05-01", statut: "Sur chantier", notes: "" },
+      { id: 4, nom: "Groupe électrogène 20 kVA", code: "MAT-2024-004", cat: "Éclairage / Énergie", chantierId: 3, entree: "2024-03-05", sortie: "2024-03-25", statut: "Disponible", notes: "" },
+      { id: 5, nom: "Grue à tour 50m", code: "MAT-2024-005", cat: "Levage", chantierId: 2, entree: "2024-01-15", sortie: "2024-06-30", statut: "Sur chantier", notes: "" },
+      { id: 6, nom: "Brise-roche hydraulique", code: "MAT-2024-006", cat: "Terrassement", chantierId: null, entree: null, sortie: null, statut: "Maintenance", notes: "Révision moteur" },
+    ],
+    nextId: 7,
+    nextChantId: 4,
+  };
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+let db = loadData();
+let editingId = null;
+let scanFoundId = null;
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function fmt(d) {
+  if (!d) return '—';
+  const [y,m,j] = d.split('-');
+  return `${j}/${m}/${y}`;
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+function isOverdue(sortie) {
+  if (!sortie) return false;
+  return sortie < today();
+}
+function getChantier(id) { return db.chantiers.find(c => c.id == id); }
+function getChantierNom(id) {
+  if (!id) return '—';
+  const c = getChantier(id);
+  return c ? c.nom : '—';
+}
+function badgeHtml(statut) {
+  if (statut === 'Sur chantier') return `<span class="badge badge-active">Sur chantier</span>`;
+  if (statut === 'Maintenance') return `<span class="badge badge-maint">Maintenance</span>`;
+  return `<span class="badge badge-dispo">Disponible</span>`;
+}
+
+// ─── VUES ─────────────────────────────────────────────────────────────────────
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  const map = { dashboard: 0, equipements: 1, chantiers: 2 };
+  document.querySelectorAll('.nav-btn')[map[v]].classList.add('active');
+  if (v === 'dashboard') renderDashboard();
+  if (v === 'equipements') { populateChantierFilter(); renderEquipTable(); }
+  if (v === 'chantiers') renderChantiers();
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const total = db.equipements.length;
+  const sur = db.equipements.filter(e => e.statut === 'Sur chantier').length;
+  const dispo = db.equipements.filter(e => e.statut === 'Disponible').length;
+  const maint = db.equipements.filter(e => e.statut === 'Maintenance').length;
+  const overdue = db.equipements.filter(e => e.statut === 'Sur chantier' && isOverdue(e.sortie)).length;
+
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric"><div class="metric-label">Total</div><div class="metric-value">${total}</div></div>
+    <div class="metric"><div class="metric-label">Sur chantier</div><div class="metric-value green">${sur}</div></div>
+    <div class="metric"><div class="metric-label">Disponibles</div><div class="metric-value amber">${dispo}</div></div>
+    <div class="metric"><div class="metric-label">Maintenance</div><div class="metric-value red">${maint}</div></div>
+  `;
+  if (overdue > 0) {
+    document.getElementById('overdue-count').innerHTML = `<span style="color:var(--red);font-size:12px;">⚠ ${overdue} retour(s) en retard</span>`;
+  } else {
+    document.getElementById('overdue-count').textContent = '';
+  }
+
+  const rows = db.equipements.map(e => {
+    const od = isOverdue(e.sortie) && e.statut === 'Sur chantier';
+    return `<tr id="row-${e.id}" ${scanFoundId == e.id ? 'class="row-highlighted"' : ''}>
+      <td style="font-weight:500">${e.nom}${e.notes ? `<br><span style="font-size:11px;color:var(--text3)">${e.notes}</span>` : ''}</td>
+      <td><span class="code">${e.code}</span></td>
+      <td style="font-size:12px">${getChantierNom(e.chantierId)}</td>
+      <td style="font-size:12px">${fmt(e.entree)}</td>
+      <td style="font-size:12px" class="${od ? 'overdue' : ''}">${fmt(e.sortie)}${od ? ' ⚠' : ''}</td>
+      <td>${badgeHtml(e.statut)}</td>
+      <td><button class="btn-icon" onclick="openEditModal(${e.id})" title="Modifier">✎</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('dash-table').innerHTML = rows || `<tr><td colspan="7" class="empty-state">Aucun équipement enregistré</td></tr>`;
+}
+
+// ─── TABLE ÉQUIPEMENTS ────────────────────────────────────────────────────────
+function populateChantierFilter() {
+  const sel = document.getElementById('eq-filter-chantier');
+  if (!sel) return;
+  sel.innerHTML = `<option value="">Tous les chantiers</option>` + db.chantiers.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+}
+
+function renderEquipTable() {
+  const search = (document.getElementById('eq-search')?.value || '').toLowerCase();
+  const statut = document.getElementById('eq-filter-statut')?.value || '';
+  const chantierId = document.getElementById('eq-filter-chantier')?.value || '';
+  const list = db.equipements.filter(e => {
+    return (!search || e.nom.toLowerCase().includes(search) || e.code.toLowerCase().includes(search))
+      && (!statut || e.statut === statut)
+      && (!chantierId || String(e.chantierId) === chantierId);
+  });
+  const rows = list.map(e => {
+    const od = isOverdue(e.sortie) && e.statut === 'Sur chantier';
+    return `<tr>
+      <td style="font-weight:500">${e.nom}</td>
+      <td><span class="code">${e.code}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${e.cat}</td>
+      <td style="font-size:12px">${getChantierNom(e.chantierId)}</td>
+      <td style="font-size:12px">${fmt(e.entree)}</td>
+      <td style="font-size:12px" class="${od ? 'overdue' : ''}">${fmt(e.sortie)}${od ? ' ⚠' : ''}</td>
+      <td>${badgeHtml(e.statut)}</td>
+      <td><button class="btn-icon" onclick="openEditModal(${e.id})" title="Modifier">✎</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('equip-table').innerHTML = rows || `<tr><td colspan="8" class="empty-state">Aucun résultat</td></tr>`;
+}
+
+// ─── CHANTIERS ────────────────────────────────────────────────────────────────
+function renderChantiers() {
+  const el = document.getElementById('chantiers-list');
+  el.innerHTML = db.chantiers.map(c => {
+    const equips = db.equipements.filter(e => e.chantierId == c.id);
+    const sur = equips.filter(e => e.statut === 'Sur chantier').length;
+    const rows = equips.map(e => {
+      const od = isOverdue(e.sortie) && e.statut === 'Sur chantier';
+      return `<tr>
+        <td style="font-weight:500">${e.nom}</td>
+        <td><span class="code">${e.code}</span></td>
+        <td style="font-size:12px">${fmt(e.entree)}</td>
+        <td style="font-size:12px" class="${od ? 'overdue' : ''}">${fmt(e.sortie)}${od ? ' ⚠' : ''}</td>
+        <td>${badgeHtml(e.statut)}</td>
+        <td><button class="btn-icon" onclick="openEditModal(${e.id})" title="Modifier">✎</button></td>
+      </tr>`;
+    }).join('');
+    return `<div class="chantier-card">
+      <div class="chantier-header">
+        <div>
+          <div class="chantier-nom">${c.nom}</div>
+          <div class="chantier-meta">📍 ${c.adresse} · 👤 ${c.resp}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge-active">${sur} sur chantier</span>
+          <button class="btn-icon" onclick="openEditChantier(${c.id})" title="Modifier le chantier">✎</button>
+        </div>
+      </div>
+      ${equips.length ? `<table>
+        <thead><tr><th>Équipement</th><th>Code</th><th>Entrée</th><th>Sortie prévue</th><th>Statut</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>` : `<div class="empty-state">Aucun équipement sur ce chantier</div>`}
+    </div>`;
+  }).join('') || `<div class="empty-state">Aucun chantier enregistré</div>`;
+}
+
+// ─── SCANNER ──────────────────────────────────────────────────────────────────
+const scannerInput = document.getElementById('scanner-global');
+const scannerPill = document.getElementById('scanner-pill');
+
+scannerInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    handleScan(this.value.trim());
+  }
+});
+
+// Douchette USB : tape vite puis envoie Enter → on détecte la vitesse
+let scanBuffer = '';
+let scanTimer = null;
+scannerInput.addEventListener('input', function() {
+  clearTimeout(scanTimer);
+  scanTimer = setTimeout(() => {
+    // Si du texte est arrivé rapidement (douchette), on lance la recherche auto
+    if (this.value.length > 3) handleScan(this.value.trim());
+  }, 300);
+});
+
+function handleScan(code) {
+  if (!code) return;
+  const upper = code.toUpperCase();
+  const equip = db.equipements.find(e => e.code.toUpperCase() === upper);
+  if (equip) {
+    scanFoundId = equip.id;
+    const c = getChantier(equip.chantierId);
+    scannerPill.className = 'scanner-result-pill found';
+    scannerPill.textContent = `✓ ${equip.nom} · ${c ? c.nom : 'Dépôt'} · ${badgeTextOnly(equip.statut)}`;
+    renderDashboard();
+    // Scroll vers la ligne
+    setTimeout(() => {
+      const row = document.getElementById('row-' + equip.id);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  } else {
+    scanFoundId = null;
+    scannerPill.className = 'scanner-result-pill notfound';
+    scannerPill.textContent = `✗ Code "${code}" introuvable`;
+  }
+}
+
+function badgeTextOnly(s) {
+  if (s === 'Sur chantier') return 'Sur chantier';
+  if (s === 'Maintenance') return 'En maintenance';
+  return 'Disponible';
+}
+
+function openEditFromScan() {
+  if (!scanFoundId) { showToast('Scanner d\'abord un code-barres'); return; }
+  openEditModal(scanFoundId);
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function populateChantierSelects() {
+  const opts = `<option value="">— Dépôt (aucun chantier)</option>` + db.chantiers.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+  ['f-chantier', 'e-chantier'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+function openAddEquip() {
+  editingId = null;
+  populateChantierSelects();
+  document.getElementById('modal-equip-title').textContent = 'Ajouter un équipement';
+  ['f-nom','f-code','f-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-entree').value = today();
+  document.getElementById('f-sortie').value = '';
+  document.getElementById('f-statut').value = 'Sur chantier';
+  document.getElementById('modal-equip').classList.add('open');
+  setTimeout(() => document.getElementById('f-nom').focus(), 50);
+}
+
+function saveEquip() {
+  const nom = document.getElementById('f-nom').value.trim();
+  const code = document.getElementById('f-code').value.trim();
+  if (!nom) { showToast('Désignation requise'); return; }
+  if (!code) { showToast('Code-barres requis'); return; }
+  if (db.equipements.find(e => e.code.toLowerCase() === code.toLowerCase() && e.id !== editingId)) {
+    showToast('Ce code-barres existe déjà'); return;
+  }
+  const equip = {
+    id: db.nextId++,
+    nom, code,
+    cat: document.getElementById('f-cat').value,
+    chantierId: document.getElementById('f-chantier').value ? parseInt(document.getElementById('f-chantier').value) : null,
+    statut: document.getElementById('f-statut').value,
+    entree: document.getElementById('f-entree').value || null,
+    sortie: document.getElementById('f-sortie').value || null,
+    notes: document.getElementById('f-notes').value.trim(),
+  };
+  db.equipements.push(equip);
+  save();
+  closeModal('modal-equip');
+  showToast(`« ${nom} » ajouté`);
+  renderDashboard();
+}
+
+function openEditModal(id) {
+  editingId = id;
+  populateChantierSelects();
+  const e = db.equipements.find(eq => eq.id == id);
+  if (!e) return;
+  document.getElementById('e-nom').value = e.nom;
+  document.getElementById('e-code').value = e.code;
+  document.getElementById('e-cat').value = e.cat;
+  document.getElementById('e-entree').value = e.entree || '';
+  document.getElementById('e-sortie').value = e.sortie || '';
+  document.getElementById('e-statut').value = e.statut;
+  document.getElementById('e-notes').value = e.notes || '';
+  const sel = document.getElementById('e-chantier');
+  sel.value = e.chantierId || '';
+  document.getElementById('modal-edit').classList.add('open');
+}
+
+function saveEdit() {
+  const e = db.equipements.find(eq => eq.id == editingId);
+  if (!e) return;
+  const newCode = document.getElementById('e-code').value.trim();
+  if (!newCode) { showToast('Code-barres requis'); return; }
+  if (db.equipements.find(eq => eq.code.toLowerCase() === newCode.toLowerCase() && eq.id !== editingId)) {
+    showToast('Ce code-barres est déjà utilisé'); return;
+  }
+  e.nom = document.getElementById('e-nom').value.trim() || e.nom;
+  e.code = newCode;
+  e.cat = document.getElementById('e-cat').value;
+  e.entree = document.getElementById('e-entree').value || null;
+  e.sortie = document.getElementById('e-sortie').value || null;
+  e.statut = document.getElementById('e-statut').value;
+  e.notes = document.getElementById('e-notes').value.trim();
+  const cv = document.getElementById('e-chantier').value;
+  e.chantierId = cv ? parseInt(cv) : null;
+  save();
+  closeModal('modal-edit');
+  showToast(`« ${e.nom} » mis à jour`);
+  renderDashboard();
+  renderEquipTable();
+  renderChantiers();
+  if (scanFoundId == editingId) handleScan(e.code);
+}
+
+function deleteEquip() {
+  const e = db.equipements.find(eq => eq.id == editingId);
+  if (!e) return;
+  if (!confirm(`Supprimer définitivement « ${e.nom} » ?\n\nCette action est irréversible.`)) return;
+  db.equipements = db.equipements.filter(eq => eq.id !== editingId);
+  if (scanFoundId == editingId) { scanFoundId = null; scannerPill.className = 'scanner-result-pill'; scannerPill.textContent = 'En attente de scan...'; }
+  save();
+  closeModal('modal-edit');
+  showToast(`« ${e.nom} » supprimé`);
+  renderDashboard();
+  renderEquipTable();
+  renderChantiers();
+}
+
+function openAddChantier() {
+  editingId = null;
+  ['c-nom','c-adresse','c-resp'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('modal-chantier-title').textContent = 'Nouveau chantier';
+  document.getElementById('btn-delete-chantier').style.display = 'none';
+  document.getElementById('modal-chantier').classList.add('open');
+}
+
+function openEditChantier(id) {
+  editingId = id;
+  const c = db.chantiers.find(ch => ch.id == id);
+  if (!c) return;
+  document.getElementById('modal-chantier-title').textContent = 'Modifier le chantier';
+  document.getElementById('c-nom').value = c.nom;
+  document.getElementById('c-adresse').value = c.adresse;
+  document.getElementById('c-resp').value = c.resp;
+  document.getElementById('btn-delete-chantier').style.display = 'inline-flex';
+  document.getElementById('modal-chantier').classList.add('open');
+}
+
+function saveChantier() {
+  const nom = document.getElementById('c-nom').value.trim();
+  if (!nom) { showToast('Nom requis'); return; }
+  if (editingId) {
+    const c = db.chantiers.find(ch => ch.id == editingId);
+    if (c) {
+      c.nom = nom;
+      c.adresse = document.getElementById('c-adresse').value.trim();
+      c.resp = document.getElementById('c-resp').value.trim();
+      save();
+      closeModal('modal-chantier');
+      showToast(`Chantier « ${nom} » mis à jour`);
+    }
+  } else {
+    db.chantiers.push({ id: db.nextChantId++, nom, adresse: document.getElementById('c-adresse').value.trim(), resp: document.getElementById('c-resp').value.trim() });
+    save();
+    closeModal('modal-chantier');
+    showToast(`Chantier « ${nom} » créé`);
+  }
+  renderChantiers();
+  populateChantierFilter();
+}
+
+function deleteChantier() {
+  const c = db.chantiers.find(ch => ch.id == editingId);
+  if (!c) return;
+  const equipsLies = db.equipements.filter(e => e.chantierId == editingId).length;
+  const msg = equipsLies > 0
+    ? `Supprimer le chantier « ${c.nom} » ?\n\n⚠ ${equipsLies} équipement(s) seront détachés de ce chantier (non supprimés).`
+    : `Supprimer définitivement le chantier « ${c.nom } » ?`;
+  if (!confirm(msg)) return;
+  db.equipements.forEach(e => { if (e.chantierId == editingId) e.chantierId = null; });
+  db.chantiers = db.chantiers.filter(ch => ch.id !== editingId);
+  save();
+  closeModal('modal-chantier');
+  showToast(`Chantier « ${c.nom} » supprimé`);
+  renderChantiers();
+  renderDashboard();
+  populateChantierFilter();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Fermer modal en cliquant backdrop
+document.querySelectorAll('.modal-backdrop').forEach(el => {
+  el.addEventListener('click', function(e) {
+    if (e.target === this) closeModal(this.id);
+  });
+});
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+// ─── SAUVEGARDE / RESTAURATION ────────────────────────────────────────────────
+function exportBackup() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const stamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+  const filename = `mat4u-sauvegarde_${stamp}.json`;
+  const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast(`Sauvegarde exportée : ${filename}`);
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.equipements || !imported.chantiers) {
+        showToast('Fichier invalide — sauvegarde non chargée'); return;
+      }
+      if (!confirm(`Restaurer la sauvegarde ${file.name} ?
+
+Attention : les données actuelles seront remplacées.`)) return;
+      db = imported;
+      save();
+      renderDashboard();
+      renderChantiers();
+      showToast('Sauvegarde restaurée avec succès');
+    } catch(err) {
+      showToast('Erreur de lecture du fichier');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderDashboard();
+// Focus auto sur le champ scanner au démarrage
+scannerInput.focus();
+</script>
+</body>
+</html>
